@@ -28,14 +28,13 @@ public:
     future<Ret> push(std::function<Ret(void)> task)
     {
         auto [fut, prom] = create_futue_promice_pair<Ret>();
-        task_queue_.push_back(
-            [task = std::move(task), prom = std::move(prom)]() mutable {
-                try {
-                    prom.set_value(std::move(task()));
-                } catch (...) {
-                    prom.set_exception(std::current_exception());
-                }
-            });
+        task_queue_.push_back([task = std::move(task), prom = std::move(prom)]() mutable {
+            try {
+                prom.set_value(task());
+            } catch (...) {
+                prom.set_exception(std::current_exception());
+            }
+        });
         return std::move(fut);
     }
 

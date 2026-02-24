@@ -64,7 +64,7 @@ public:
         }
     }
 
-    void set_value(T&& value)
+    void set_value(T value)
     {
         resolve(con::result<T>(std::move(value)));
     }
