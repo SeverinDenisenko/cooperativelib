@@ -1,0 +1,6 @@
+[submodule "submodules/unittestlib"]
+	path = submodules/unittestlib
+	url = https://github.com/SeverinDenisenko/unittestlib
+[submodule "submodules/containerslib"]
+	path = submodules/containerslib
+	url = https://github.com/SeverinDenisenko/containerslib
