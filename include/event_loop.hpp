@@ -27,7 +27,7 @@ public:
     template <typename Ret>
     future<Ret> push(std::function<Ret(void)> task)
     {
-        auto [fut, prom] = create_futue_promice_pair<Ret>();
+        auto [fut, prom] = create_future_promise_pair<Ret>();
         task_queue_.push_back([task = std::move(task), prom = std::move(prom)]() mutable {
             try {
                 prom.set_value(task());

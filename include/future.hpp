@@ -12,13 +12,13 @@ template <typename T>
 class future;
 
 template <typename T>
-class promice;
+class promise;
 
 template <typename T>
-std::pair<future<T>, promice<T>> create_futue_promice_pair() noexcept;
+std::pair<future<T>, promise<T>> create_future_promise_pair() noexcept;
 
 template <typename T>
-struct future_promice_control_block {
+struct future_promise_control_block {
     size_t refcount { 0 };
     bool ready { false };
     con::result<T> value {};
@@ -26,15 +26,15 @@ struct future_promice_control_block {
 };
 
 template <typename T>
-class promice {
+class promise {
 public:
-    promice(const promice& other)
+    promise(const promise& other)
         : control_block_(other.control_block_)
     {
         ++control_block_->refcount;
     }
 
-    ~promice()
+    ~promise()
     {
         if (control_block_ == nullptr) {
             return;
@@ -46,9 +46,9 @@ public:
         }
     }
 
-    promice() = delete;
+    promise() = delete;
 
-    promice(promice&& other)
+    promise(promise&& other)
     {
         control_block_       = other.control_block_;
         other.control_block_ = nullptr;
@@ -75,16 +75,16 @@ public:
     }
 
     template <typename U>
-    friend std::pair<future<U>, promice<U>> create_futue_promice_pair() noexcept;
+    friend std::pair<future<U>, promise<U>> create_future_promise_pair() noexcept;
 
 private:
-    promice(future_promice_control_block<T>* control_block) noexcept
+    promise(future_promise_control_block<T>* control_block) noexcept
         : control_block_(control_block)
     {
         ++control_block_->refcount;
     }
 
-    future_promice_control_block<T>* control_block_;
+    future_promise_control_block<T>* control_block_;
 };
 
 template <typename T>
@@ -112,7 +112,7 @@ public:
     }
 
     template <typename U>
-    friend std::pair<future<U>, promice<U>> create_futue_promice_pair() noexcept;
+    friend std::pair<future<U>, promise<U>> create_future_promise_pair() noexcept;
 
     bool ready()
     {
@@ -129,7 +129,7 @@ public:
         return control_block_->value.has_value() && control_block_->ready;
     }
 
-    T& get()
+    T get()
     {
         if (!control_block_->ready) {
             throw con::error("future is not ready");
@@ -142,29 +142,29 @@ public:
     future<Ret> then(std::function<Ret(con::result<T>)> task);
 
 private:
-    future(future_promice_control_block<T>* control_block) noexcept
+    future(future_promise_control_block<T>* control_block) noexcept
         : control_block_(control_block)
     {
         ++control_block_->refcount;
     }
 
-    future_promice_control_block<T>* control_block_;
+    future_promise_control_block<T>* control_block_;
 };
 
 template <typename T>
-std::pair<future<T>, promice<T>> create_futue_promice_pair() noexcept
+std::pair<future<T>, promise<T>> create_future_promise_pair() noexcept
 {
-    future_promice_control_block<T>* contol_block = new future_promice_control_block<T>();
-    future<T> fut(contol_block);
-    promice<T> prom(contol_block);
-    return std::pair<future<T>, promice<T>>(std::move(fut), std::move(prom));
+    future_promise_control_block<T>* control_block = new future_promise_control_block<T>();
+    future<T> fut(control_block);
+    promise<T> prom(control_block);
+    return std::pair<future<T>, promise<T>>(std::move(fut), std::move(prom));
 }
 
 template <typename Arg>
 template <typename Ret>
 future<Ret> future<Arg>::then(std::function<Ret(con::result<Arg>)> task)
 {
-    auto [fut, prom] = create_futue_promice_pair<Ret>();
+    auto [fut, prom] = create_future_promise_pair<Ret>();
 
     control_block_->continuation
         = [prom = std::move(prom), task = std::move(task)](con::result<Arg> arg) mutable -> std::monostate {
