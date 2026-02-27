@@ -66,7 +66,7 @@ public:
             return *this;
         }
 
-        if (handle_ && !handle_.done()) {
+        if (handle_) {
             handle_.destroy();
         }
 
@@ -79,7 +79,7 @@ public:
 
     ~corutine()
     {
-        if (handle_ && !handle_.done()) {
+        if (handle_) {
             handle_.destroy();
         }
     }
