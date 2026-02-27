@@ -11,13 +11,13 @@ template <typename T>
 class awaiter;
 
 template <typename T>
-class task {
+class corutine {
 public:
     class promise_type {
     public:
-        task get_return_object()
+        corutine get_return_object()
         {
-            return task { promise_.get_future(), std::coroutine_handle<promise_type>::from_promise(*this) };
+            return corutine { promise_.get_future(), std::coroutine_handle<promise_type>::from_promise(*this) };
         }
 
         std::suspend_never initial_suspend()
@@ -44,23 +44,23 @@ public:
         promise<T> promise_;
     };
 
-    task(future<T>&& future, std::coroutine_handle<promise_type> handle)
+    corutine(future<T>&& future, std::coroutine_handle<promise_type> handle)
         : future_(std::move(future))
         , handle_(handle)
     {
     }
 
-    task(const task&)            = delete;
-    task& operator=(const task&) = delete;
+    corutine(const corutine&)            = delete;
+    corutine& operator=(const corutine&) = delete;
 
-    task(task&& other) noexcept
+    corutine(corutine&& other) noexcept
     {
         future_       = std::move(other.future_);
         handle_       = other.handle_;
         other.handle_ = nullptr;
     }
 
-    task& operator=(task&& other) noexcept
+    corutine& operator=(corutine&& other) noexcept
     {
         if (this == std::addressof(other)) {
             return *this;
@@ -77,7 +77,7 @@ public:
         return *this;
     }
 
-    ~task()
+    ~corutine()
     {
         if (handle_ && !handle_.done()) {
             handle_.destroy();

@@ -13,10 +13,13 @@ public:
 
     ev_loop() = default;
 
-    void start(task_t task)
+    ev_loop(const ev_loop&)            = delete;
+    ev_loop& operator=(const ev_loop&) = delete;
+
+    void start(task_t corutine)
     {
         stop_ = false;
-        task();
+        corutine();
 
         while (!stop_ && !task_queue_.empty()) {
             task_queue_.front()();
@@ -24,13 +27,18 @@ public:
         }
     }
 
+    void push(task_t corutine)
+    {
+        task_queue_.push_back(std::move(corutine));
+    }
+
     template <typename Ret>
-    future<Ret> push(std::function<Ret(void)> task)
+    future<Ret> push(std::function<Ret(void)> corutine)
     {
         auto [fut, prom] = create_future_promise_pair<Ret>();
-        task_queue_.push_back([task = std::move(task), prom = std::move(prom)]() mutable {
+        task_queue_.push_back([corutine = std::move(corutine), prom = std::move(prom)]() mutable {
             try {
-                prom.set_value(task());
+                prom.set_value(corutine());
             } catch (...) {
                 prom.set_exception(std::current_exception());
             }

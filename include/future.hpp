@@ -4,9 +4,10 @@
 #include "result.hpp"
 
 #include <functional>
-#include <variant>
 
 namespace co {
+
+struct unit { };
 
 template <typename T>
 class future;
@@ -22,7 +23,7 @@ struct future_promise_control_block {
     size_t refcount { 0 };
     bool ready { false };
     con::result<T> value {};
-    std::function<std::monostate(con::result<T>)> continuation {};
+    std::function<unit(con::result<T>)> continuation {};
 };
 
 template <typename T>
@@ -170,7 +171,7 @@ public:
     }
 
     template <typename Ret>
-    future<Ret> then(std::function<Ret(con::result<T>)> task);
+    future<Ret> then(std::function<Ret(con::result<T>)> corutine);
 
     friend class promise<T>;
 
@@ -195,19 +196,19 @@ std::pair<future<T>, promise<T>> create_future_promise_pair() noexcept
 
 template <typename Arg>
 template <typename Ret>
-future<Ret> future<Arg>::then(std::function<Ret(con::result<Arg>)> task)
+future<Ret> future<Arg>::then(std::function<Ret(con::result<Arg>)> corutine)
 {
     auto [fut, prom] = create_future_promise_pair<Ret>();
 
     control_block_->continuation
-        = [prom = std::move(prom), task = std::move(task)](con::result<Arg> arg) mutable -> std::monostate {
+        = [prom = std::move(prom), corutine = std::move(corutine)](con::result<Arg> arg) mutable -> unit {
         try {
-            prom.set_value(task(std::move(arg)));
+            prom.set_value(corutine(std::move(arg)));
         } catch (...) {
             prom.set_exception(std::current_exception());
-            return std::monostate {};
+            return unit {};
         }
-        return std::monostate {};
+        return unit {};
     };
 
     return std::move(fut);
