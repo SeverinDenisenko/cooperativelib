@@ -27,7 +27,6 @@ jobs:
           - os: windows-latest
             cpp_compiler: g++
           - os: windows-latest
-            build_type: Release
             sanitizer: ENABLE_ASAN
 
     steps:
