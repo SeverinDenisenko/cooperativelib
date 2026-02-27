@@ -28,6 +28,10 @@ jobs:
             cpp_compiler: g++
           - os: windows-latest
             sanitizer: ENABLE_ASAN
+          - os: windows-latest
+            sanitizer: ENABLE_UBSAN
+          - os: windows-latest
+            sanitizer: ENABLE_TSAN
 
     steps:
       - uses: actions/checkout@v4
