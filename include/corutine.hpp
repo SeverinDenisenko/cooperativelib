@@ -12,12 +12,11 @@ class awaiter;
 template <typename T>
 class task {
 public:
-    struct promise_type {
-        promise<T> promise;
-
+    class promise_type {
+    public:
         task get_return_object()
         {
-            return task { promise.get_future() };
+            return task { promise_.get_future() };
         }
 
         std::suspend_never initial_suspend()
@@ -32,13 +31,16 @@ public:
 
         void return_value(T value)
         {
-            promise.set_value(value);
+            promise_.set_value(value);
         }
 
         void unhandled_exception()
         {
-            promise.set_exception(std::current_exception());
+            promise_.set_exception(std::current_exception());
         }
+
+    private:
+        promise<T> promise_;
     };
 
     task(future<T>&& future)
@@ -64,30 +66,31 @@ template <typename T>
 class awaiter {
 public:
     awaiter(future<T>&& future)
-        : future(std::move(future))
+        : future_(std::move(future))
     {
     }
 
     bool await_ready() const noexcept
     {
-        return future.ready();
+        return future_.ready();
     }
 
     void await_suspend(std::coroutine_handle<> handle)
     {
-        future.template then<std::monostate>([handle](con::result<T> _) mutable -> std::monostate {
-            handle.resume();
-            return std::monostate {};
-        });
+        future_.template then<std::monostate>(
+            [handle]([[maybe_unused]] con::result<T> result) mutable -> std::monostate {
+                handle.resume();
+                return std::monostate {};
+            });
     }
 
     T await_resume()
     {
-        return future.get();
+        return future_.get();
     }
 
 private:
-    future<T> future;
+    future<T> future_;
 };
 
 }
