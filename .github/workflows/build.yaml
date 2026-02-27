@@ -16,6 +16,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         build_type: [Release, Debug]
         cpp_compiler: [g++, clang++, msvc]
+        sanitizer: [ENABLE_ASAN, ENABLE_UBSAN, ENABLE_TSAN, DISABLE_SANITIZERS]
         exclude:
           - os: ubuntu-latest
             cpp_compiler: msvc
@@ -25,6 +26,9 @@ jobs:
             cpp_compiler: g++
           - os: windows-latest
             cpp_compiler: g++
+          - os: windows-latest
+            build_type: Release
+            sanitizer: ENABLE_ASAN
 
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +47,7 @@ jobs:
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DENABLE_TESTING=1
+          -D${{ matrix.sanitizer }}=1
           -S ${{ github.workspace }}
 
       - name: Build
