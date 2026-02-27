@@ -16,7 +16,7 @@ public:
     public:
         task get_return_object()
         {
-            return task { promise_.get_future() };
+            return task { promise_.get_future(), std::coroutine_handle<promise_type>::from_promise(*this) };
         }
 
         std::suspend_never initial_suspend()
@@ -43,9 +43,17 @@ public:
         promise<T> promise_;
     };
 
-    task(future<T>&& future)
+    task(future<T>&& future, std::coroutine_handle<promise_type> handle)
         : future_(std::move(future))
+        , handle_(handle)
     {
+    }
+
+    ~task()
+    {
+        if (handle_ && !handle_.done()) {
+            handle_.destroy();
+        }
     }
 
     auto operator co_await()
@@ -60,6 +68,7 @@ public:
 
 private:
     future<T> future_;
+    std::coroutine_handle<promise_type> handle_;
 };
 
 template <typename T>
