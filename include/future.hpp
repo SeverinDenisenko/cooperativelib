@@ -46,12 +46,21 @@ public:
         }
     }
 
-    promise() = delete;
+    promise()
+        : control_block_(new future_promise_control_block<T>)
+    {
+        ++control_block_->refcount;
+    };
 
     promise(promise&& other)
     {
         control_block_       = other.control_block_;
         other.control_block_ = nullptr;
+    }
+
+    future<T> get_future()
+    {
+        return future<T>(control_block_);
     }
 
     void resolve(con::result<T>&& value)
@@ -114,17 +123,17 @@ public:
     template <typename U>
     friend std::pair<future<U>, promise<U>> create_future_promise_pair() noexcept;
 
-    bool ready()
+    bool ready() const
     {
         return control_block_->ready;
     }
 
-    bool has_exception()
+    bool has_exception() const
     {
         return control_block_->value.has_exception();
     }
 
-    bool has_value()
+    bool has_value() const
     {
         return control_block_->value.has_value() && control_block_->ready;
     }
@@ -140,6 +149,8 @@ public:
 
     template <typename Ret>
     future<Ret> then(std::function<Ret(con::result<T>)> task);
+
+    friend class promise<T>;
 
 private:
     future(future_promise_control_block<T>* control_block) noexcept
