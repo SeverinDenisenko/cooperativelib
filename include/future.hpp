@@ -111,13 +111,35 @@ public:
         }
     }
 
-    future(const future&) = delete;
-    future()              = delete;
+    future(const future&)            = delete;
+    future& operator=(const future&) = delete;
+
+    future()
+        : control_block_(nullptr) { };
 
     future(future&& other)
     {
         control_block_       = other.control_block_;
         other.control_block_ = nullptr;
+    }
+
+    future<T>& operator=(future&& other)
+    {
+        if (this == std::addressof(other)) {
+            return *this;
+        }
+
+        if (control_block_ != nullptr) {
+            --control_block_->refcount;
+            if (control_block_->refcount == 0) {
+                delete control_block_;
+            }
+        }
+
+        control_block_       = other.control_block_;
+        other.control_block_ = nullptr;
+
+        return *this;
     }
 
     template <typename U>

@@ -34,4 +34,11 @@ SIMPLE_TEST(corutine_test_3)
     ASSERT_EQ(result.get_future().get(), 3);
 }
 
+SIMPLE_TEST(corutine_test_4)
+{
+    co::task<int> result  = test_corutine_1();
+    co::task<int> result2 = std::move(result);
+    ASSERT_EQ(result2.get_future().get(), 1);
+}
+
 TEST_MAIN()

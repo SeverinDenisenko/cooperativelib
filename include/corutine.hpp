@@ -3,6 +3,7 @@
 #include "future.hpp"
 
 #include <coroutine>
+#include <memory>
 
 namespace co {
 
@@ -47,6 +48,33 @@ public:
         : future_(std::move(future))
         , handle_(handle)
     {
+    }
+
+    task(const task&)            = delete;
+    task& operator=(const task&) = delete;
+
+    task(task&& other) noexcept
+    {
+        future_       = std::move(other.future_);
+        handle_       = other.handle_;
+        other.handle_ = nullptr;
+    }
+
+    task& operator=(task&& other) noexcept
+    {
+        if (this == std::addressof(other)) {
+            return *this;
+        }
+
+        if (handle_ && !handle_.done()) {
+            handle_.destroy();
+        }
+
+        future_       = std::move(other.future_);
+        handle_       = other.handle_;
+        other.handle_ = nullptr;
+
+        return *this;
     }
 
     ~task()
