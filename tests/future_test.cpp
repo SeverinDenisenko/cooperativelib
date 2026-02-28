@@ -50,7 +50,7 @@ SIMPLE_TEST(future_test_4)
 {
     auto [fut, prom] = co::create_future_promise_pair<int>();
 
-    co::future<int> cont = fut.then<int>([](con::result<int> i) { return i.value() + 1; });
+    co::future<int> cont = fut.then([](con::result<int> i) { return i.value() + 1; });
 
     try {
         throw std::runtime_error("test");
@@ -74,7 +74,7 @@ SIMPLE_TEST(future_test_5)
 {
     auto [fut, prom] = co::create_future_promise_pair<int>();
 
-    co::future<int> cont = fut.then<int>([](con::result<int> i) { return i.value() + 1; });
+    co::future<int> cont = fut.then([](con::result<int> i) { return i.value() + 1; });
 
     prom.set_value(1);
 

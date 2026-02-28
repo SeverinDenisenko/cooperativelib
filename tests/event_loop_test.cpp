@@ -2,7 +2,6 @@
 #include "unittest.hpp"
 
 #include "event_loop.hpp"
-#include <variant>
 
 SIMPLE_TEST(event_loop_test_1)
 {
@@ -12,14 +11,14 @@ SIMPLE_TEST(event_loop_test_1)
 
     loop.start([&]() {
         iters++;
-        loop.push<std::monostate>([&]() -> std::monostate {
+        loop.invoke([&]() {
                 iters++;
-                return std::monostate {};
+                return co::unit {};
             })
-            .then<std::monostate>([&](con::result<std::monostate>) -> std::monostate {
+            .then([&](con::result<co::unit>) {
                 loop.stop();
                 iters++;
-                return std::monostate {};
+                return co::unit {};
             });
     });
 

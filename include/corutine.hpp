@@ -114,11 +114,10 @@ public:
 
     void await_suspend(std::coroutine_handle<> handle)
     {
-        future_.template then<std::monostate>(
-            [handle]([[maybe_unused]] con::result<T> result) mutable -> std::monostate {
-                handle.resume();
-                return std::monostate {};
-            });
+        future_.then([handle]([[maybe_unused]] con::result<T> result) mutable -> std::monostate {
+            handle.resume();
+            return std::monostate {};
+        });
     }
 
     T await_resume()

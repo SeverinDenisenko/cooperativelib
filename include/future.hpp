@@ -4,10 +4,12 @@
 #include "result.hpp"
 
 #include <functional>
+#include <type_traits>
+#include <variant>
 
 namespace co {
 
-struct unit { };
+using unit = std::monostate;
 
 template <typename T>
 class future;
@@ -29,6 +31,7 @@ struct future_promise_control_block {
 template <typename T>
 class promise {
 public:
+    // Introduce move only functions to fix this
     promise(const promise& other)
         : control_block_(other.control_block_)
     {
@@ -170,8 +173,8 @@ public:
         return control_block_->value.value();
     }
 
-    template <typename Ret>
-    future<Ret> then(std::function<Ret(con::result<T>)> corutine);
+    template <typename Continuation>
+    future<std::invoke_result_t<Continuation, con::result<T>>> then(Continuation continuation);
 
     friend class promise<T>;
 
@@ -194,16 +197,16 @@ std::pair<future<T>, promise<T>> create_future_promise_pair() noexcept
     return std::pair<future<T>, promise<T>>(std::move(fut), std::move(prom));
 }
 
-template <typename Arg>
-template <typename Ret>
-future<Ret> future<Arg>::then(std::function<Ret(con::result<Arg>)> corutine)
+template <typename T>
+template <typename Continuation>
+future<std::invoke_result_t<Continuation, con::result<T>>> future<T>::then(Continuation continuation)
 {
-    auto [fut, prom] = create_future_promise_pair<Ret>();
+    auto [fut, prom] = create_future_promise_pair<std::invoke_result_t<Continuation, con::result<T>>>();
 
     control_block_->continuation
-        = [prom = std::move(prom), corutine = std::move(corutine)](con::result<Arg> arg) mutable -> unit {
+        = [prom = std::move(prom), continuation = std::move(continuation)](con::result<T> arg) mutable -> unit {
         try {
-            prom.set_value(corutine(std::move(arg)));
+            prom.set_value(continuation(std::move(arg)));
         } catch (...) {
             prom.set_exception(std::current_exception());
             return unit {};

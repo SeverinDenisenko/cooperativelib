@@ -6,7 +6,7 @@ void wait_for_loops(uint32_t loops, co::ev_loop& loop, co::promise<co::unit> pro
 {
     if (loops > 0) {
         --loops;
-        loop.push([loops, &loop, promise = std::move(promise)]() mutable {
+        loop.post([loops, &loop, promise = std::move(promise)]() mutable {
             wait_for_loops(loops, loop, std::move(promise));
         });
     } else {
