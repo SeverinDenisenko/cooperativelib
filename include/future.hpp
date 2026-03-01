@@ -1,9 +1,9 @@
 #pragma once
 
 #include "error.hpp"
+#include "function.hpp"
 #include "result.hpp"
 
-#include <functional>
 #include <type_traits>
 #include <variant>
 
@@ -25,18 +25,14 @@ struct future_promise_control_block {
     size_t refcount { 0 };
     bool ready { false };
     con::result<T> value {};
-    std::function<unit(con::result<T>)> continuation {};
+    move_only_function<unit, con::result<T>> continuation {};
 };
 
 template <typename T>
 class promise {
 public:
-    // Introduce move only functions to fix this
-    promise(const promise& other)
-        : control_block_(other.control_block_)
-    {
-        ++control_block_->refcount;
-    }
+    promise(const promise& other)      = delete;
+    promise& operator=(const promise&) = delete;
 
     ~promise()
     {
@@ -204,15 +200,14 @@ future<std::invoke_result_t<Continuation, con::result<T>>> future<T>::then(Conti
     auto [fut, prom] = create_future_promise_pair<std::invoke_result_t<Continuation, con::result<T>>>();
 
     control_block_->continuation
-        = [prom = std::move(prom), continuation = std::move(continuation)](con::result<T> arg) mutable -> unit {
-        try {
-            prom.set_value(continuation(std::move(arg)));
-        } catch (...) {
-            prom.set_exception(std::current_exception());
-            return unit {};
-        }
-        return unit {};
-    };
+        = [prom = std::move(prom), continuation = std::move(continuation)](con::result<T> arg) mutable {
+              try {
+                  prom.set_value(continuation(std::move(arg)));
+              } catch (...) {
+                  prom.set_exception(std::current_exception());
+              }
+              return unit {};
+          };
 
     return std::move(fut);
 }

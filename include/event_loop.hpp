@@ -1,10 +1,10 @@
 #pragma once
 
 #include <concepts>
-#include <functional>
 #include <list>
 #include <type_traits>
 
+#include "function.hpp"
 #include "future.hpp"
 
 namespace co {
@@ -57,7 +57,7 @@ public:
     }
 
 private:
-    std::list<std::function<void(void)>> task_queue_;
+    std::list<move_only_function<void>> task_queue_;
     bool stop_;
 };
 
