@@ -4,6 +4,7 @@
 #include "function.hpp"
 #include "result.hpp"
 
+#include <exception>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -19,14 +20,33 @@ template <typename T>
 class promise;
 
 template <typename T>
-std::pair<future<T>, promise<T>> create_future_promise_pair() noexcept;
+std::pair<future<T>, promise<T>> create_future_promise() noexcept;
 
 template <typename T>
-struct future_promise_control_block {
+promise<T> create_promise() noexcept;
+
+template <typename T>
+class future_promise_control_block {
+private:
+    template <typename U>
+    friend class promise;
+
+    template <typename U>
+    friend class future;
+
+    template <typename U>
+    friend std::pair<future<U>, promise<U>> create_future_promise() noexcept;
+
+    template <typename U>
+    friend promise<U> create_promise() noexcept;
+
+    future_promise_control_block()  = default;
+    ~future_promise_control_block() = default;
+
     size_t refcount { 0 };
     bool ready { false };
-    con::result<T> value {};
-    move_only_function<unit, con::result<T>> continuation {};
+    con::result<T> value { };
+    move_only_function<unit, con::result<T>> continuation { };
 };
 
 template <typename T>
@@ -41,6 +61,10 @@ public:
             return;
         }
 
+        if (future_given_ && !control_block_->ready) {
+            set_exception(std::make_exception_ptr(con::error("broken promise")));
+        }
+
         --control_block_->refcount;
         if (control_block_->refcount == 0) {
             delete control_block_;
@@ -48,10 +72,9 @@ public:
     }
 
     promise()
-        : control_block_(new future_promise_control_block<T>)
+        : control_block_(nullptr)
     {
-        ++control_block_->refcount;
-    };
+    }
 
     promise(promise&& other)
     {
@@ -71,16 +94,32 @@ public:
 
     future<T> get_future()
     {
+        if (!control_block_) {
+            throw con::error("empty promise");
+        }
+
+        if (future_given_) {
+            throw con::error("cannot create two futures");
+        }
+
+        future_given_ = true;
+
         return future<T>(control_block_);
     }
 
     void resolve(con::result<T>&& value)
     {
+        if (!control_block_) {
+            throw con::error("empty primise");
+        }
+        if (control_block_->ready) {
+            throw con::error("promise already resolved");
+        }
         control_block_->ready = true;
         control_block_->value = std::move(value);
         if (control_block_->continuation) {
             control_block_->continuation(control_block_->value);
-            control_block_->continuation = {};
+            control_block_->continuation = { };
         }
     }
 
@@ -95,7 +134,10 @@ public:
     }
 
     template <typename U>
-    friend std::pair<future<U>, promise<U>> create_future_promise_pair() noexcept;
+    friend std::pair<future<U>, promise<U>> create_future_promise() noexcept;
+
+    template <typename U>
+    friend promise<U> create_promise() noexcept;
 
 private:
     promise(future_promise_control_block<T>* control_block) noexcept
@@ -105,6 +147,7 @@ private:
     }
 
     future_promise_control_block<T>* control_block_ { nullptr };
+    bool future_given_ { false };
 };
 
 template <typename T>
@@ -145,7 +188,7 @@ public:
     }
 
     template <typename U>
-    friend std::pair<future<U>, promise<U>> create_future_promise_pair() noexcept;
+    friend std::pair<future<U>, promise<U>> create_future_promise() noexcept;
 
     bool ready() const
     {
@@ -187,7 +230,7 @@ private:
 };
 
 template <typename T>
-std::pair<future<T>, promise<T>> create_future_promise_pair() noexcept
+std::pair<future<T>, promise<T>> create_future_promise() noexcept
 {
     future_promise_control_block<T>* control_block = new future_promise_control_block<T>();
     future<T> fut(control_block);
@@ -196,10 +239,18 @@ std::pair<future<T>, promise<T>> create_future_promise_pair() noexcept
 }
 
 template <typename T>
+promise<T> create_promise() noexcept
+{
+    future_promise_control_block<T>* control_block = new future_promise_control_block<T>();
+    promise<T> prom(control_block);
+    return std::move(prom);
+}
+
+template <typename T>
 template <typename Continuation>
 future<std::invoke_result_t<Continuation, con::result<T>>> future<T>::then(Continuation continuation)
 {
-    auto [fut, prom] = create_future_promise_pair<std::invoke_result_t<Continuation, con::result<T>>>();
+    auto [fut, prom] = create_future_promise<std::invoke_result_t<Continuation, con::result<T>>>();
 
     control_block_->continuation
         = [prom = std::move(prom), continuation = std::move(continuation)](con::result<T> arg) mutable {
@@ -208,12 +259,12 @@ future<std::invoke_result_t<Continuation, con::result<T>>> future<T>::then(Conti
               } catch (...) {
                   prom.set_exception(std::current_exception());
               }
-              return unit {};
+              return unit { };
           };
 
     if (ready()) {
         control_block_->continuation(control_block_->value);
-        control_block_->continuation = {};
+        control_block_->continuation = { };
     }
 
     return std::move(fut);

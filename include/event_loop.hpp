@@ -61,7 +61,7 @@ public:
         requires std::invocable<Function>
     future<std::invoke_result_t<Function>> invoke(Function function)
     {
-        auto [fut, prom] = create_future_promise_pair<std::invoke_result_t<Function>>();
+        auto [fut, prom] = create_future_promise<std::invoke_result_t<Function>>();
         post([function = std::move(function), prom = std::move(prom)]() mutable {
             try {
                 prom.set_value(function());
@@ -79,7 +79,7 @@ public:
         requires std::invocable<Function>
     future<std::invoke_result_t<Function>> invoke(ev_loop& other_ev_loop, Function function)
     {
-        auto [fut, prom] = create_future_promise_pair<std::invoke_result_t<Function>>();
+        auto [fut, prom] = create_future_promise<std::invoke_result_t<Function>>();
 
         other_ev_loop.post([function = std::move(function), prom = std::move(prom), this]() mutable {
             con::result<std::invoke_result_t<Function>> result;

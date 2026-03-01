@@ -19,7 +19,7 @@ void wait_for_loops(uint32_t loops, co::ev_loop& loop, co::promise<co::unit> pro
 
 co::awaiter<co::unit> wait_for_loops(co::ev_loop& loop, uint32_t loops)
 {
-    auto [fut, prom] = co::create_future_promise_pair<co::unit>();
+    auto [fut, prom] = co::create_future_promise<co::unit>();
 
     wait_for_loops(loops, loop, std::move(prom));
 

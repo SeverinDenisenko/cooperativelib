@@ -15,6 +15,11 @@ class corutine {
 public:
     class promise_type {
     public:
+        promise_type()
+            : promise_(create_promise<T>())
+        {
+        }
+
         corutine get_return_object()
         {
             return corutine { promise_.get_future(), std::coroutine_handle<promise_type>::from_promise(*this) };
