@@ -2,6 +2,7 @@
 
 #include <concepts>
 #include <functional>
+#include <memory>
 #include <type_traits>
 
 namespace co {
@@ -33,13 +34,13 @@ private:
         F functor_;
     };
 
-    functor_base* function_;
+    std::unique_ptr<functor_base> function_;
 
 public:
     template <typename F>
         requires(std::invocable<F&, Args...> && !std::same_as<std::decay_t<F>, move_only_function>)
     move_only_function(F&& f)
-        : function_(new functor<std::decay_t<F>>(std::forward<F>(f)))
+        : function_(std::make_unique<functor<std::decay_t<F>>>(std::forward<F>(f)))
     {
     }
 
@@ -48,31 +49,14 @@ public:
     {
     }
 
-    move_only_function(move_only_function&& other) noexcept
-    {
-        std::swap(other.function_, function_);
-    }
-
-    move_only_function& operator=(move_only_function&& other) noexcept
-    {
-        if (this == std::addressof(other)) {
-            return *this;
-        }
-
-        std::swap(other.function_, function_);
-
-        return *this;
-    }
+    move_only_function(move_only_function&& other) noexcept            = default;
+    move_only_function& operator=(move_only_function&& other) noexcept = default;
 
     template <typename F>
         requires(std::invocable<F&, Args...> && !std::same_as<std::decay_t<F>, move_only_function>)
     move_only_function& operator=(F&& f) noexcept
     {
-        if (function_) {
-            delete function_;
-        }
-
-        function_ = new functor<std::decay_t<F>>(std::forward<F>(f));
+        function_ = std::make_unique<functor<std::decay_t<F>>>(std::forward<F>(f));
 
         return *this;
     }
@@ -80,12 +64,7 @@ public:
     move_only_function(const move_only_function& other)            = delete;
     move_only_function& operator=(const move_only_function& other) = delete;
 
-    ~move_only_function()
-    {
-        if (function_) {
-            delete function_;
-        }
-    }
+    ~move_only_function() = default;
 
     Ret operator()(Args... args)
     {
@@ -129,13 +108,13 @@ private:
         F functor_;
     };
 
-    functor_base* function_;
+    std::unique_ptr<functor_base> function_;
 
 public:
     template <typename F>
         requires(std::invocable<F&, Args...> && !std::same_as<std::decay_t<F>, move_only_function>)
     move_only_function(F&& f)
-        : function_(new functor<std::decay_t<F>>(std::forward<F>(f)))
+        : function_(std::make_unique<functor<std::decay_t<F>>>(std::forward<F>(f)))
     {
     }
 
@@ -144,31 +123,14 @@ public:
     {
     }
 
-    move_only_function(move_only_function&& other) noexcept
-    {
-        std::swap(other.function_, function_);
-    }
-
-    move_only_function& operator=(move_only_function&& other) noexcept
-    {
-        if (this == std::addressof(other)) {
-            return *this;
-        }
-
-        std::swap(other.function_, function_);
-
-        return *this;
-    }
+    move_only_function(move_only_function&& other) noexcept            = default;
+    move_only_function& operator=(move_only_function&& other) noexcept = default;
 
     template <typename F>
         requires(std::invocable<F&, Args...> && !std::same_as<std::decay_t<F>, move_only_function>)
     move_only_function& operator=(F&& f) noexcept
     {
-        if (function_) {
-            delete function_;
-        }
-
-        function_ = new functor<std::decay_t<F>>(std::forward<F>(f));
+        function_ = std::make_unique<functor<std::decay_t<F>>>(std::forward<F>(f));
 
         return *this;
     }
@@ -176,12 +138,7 @@ public:
     move_only_function(const move_only_function& other)            = delete;
     move_only_function& operator=(const move_only_function& other) = delete;
 
-    ~move_only_function()
-    {
-        if (function_) {
-            delete function_;
-        }
-    }
+    ~move_only_function() = default;
 
     void operator()(Args... args)
     {
