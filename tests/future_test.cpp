@@ -85,4 +85,24 @@ SIMPLE_TEST(future_test_5)
     ASSERT_EQ(cont.get(), 2);
 }
 
+SIMPLE_TEST(future_test_6)
+{
+    auto [fut, prom] = co::create_future_promise_pair<int>();
+
+    co::future<int> cont = fut.then([](con::result<int> i) {
+                                  return i.value() + 1; //
+                              })
+                               .then([](con::result<int> i) {
+                                   return i.value() + 1; //
+                               });
+
+    prom.set_value(1);
+
+    ASSERT_TRUE(fut.ready());
+    ASSERT_TRUE(fut.has_value());
+    ASSERT_TRUE(!fut.has_exception());
+
+    ASSERT_EQ(cont.get(), 3);
+}
+
 TEST_MAIN()

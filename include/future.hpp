@@ -5,6 +5,7 @@
 #include "result.hpp"
 
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 namespace co {
@@ -54,8 +55,18 @@ public:
 
     promise(promise&& other)
     {
-        control_block_       = other.control_block_;
-        other.control_block_ = nullptr;
+        std::swap(other.control_block_, control_block_);
+    }
+
+    promise& operator=(promise&& other)
+    {
+        if (this == std::addressof(other)) {
+            return *this;
+        }
+
+        std::swap(other.control_block_, control_block_);
+
+        return *this;
     }
 
     future<T> get_future()
@@ -93,7 +104,7 @@ private:
         ++control_block_->refcount;
     }
 
-    future_promise_control_block<T>* control_block_;
+    future_promise_control_block<T>* control_block_ { nullptr };
 };
 
 template <typename T>
@@ -119,25 +130,16 @@ public:
 
     future(future&& other)
     {
-        control_block_       = other.control_block_;
-        other.control_block_ = nullptr;
+        std::swap(other.control_block_, control_block_);
     }
 
-    future<T>& operator=(future&& other)
+    future& operator=(future&& other)
     {
         if (this == std::addressof(other)) {
             return *this;
         }
 
-        if (control_block_ != nullptr) {
-            --control_block_->refcount;
-            if (control_block_->refcount == 0) {
-                delete control_block_;
-            }
-        }
-
-        control_block_       = other.control_block_;
-        other.control_block_ = nullptr;
+        std::swap(other.control_block_, control_block_);
 
         return *this;
     }
@@ -181,7 +183,7 @@ private:
         ++control_block_->refcount;
     }
 
-    future_promise_control_block<T>* control_block_;
+    future_promise_control_block<T>* control_block_ { nullptr };
 };
 
 template <typename T>
