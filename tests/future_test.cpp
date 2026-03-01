@@ -116,7 +116,7 @@ SIMPLE_TEST(future_test_7)
     try {
         fut.get();
         ASSERT_TRUE(false);
-    } catch (const std::exception& e) {
+    } catch (...) {
     }
 }
 
