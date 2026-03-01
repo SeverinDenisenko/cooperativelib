@@ -211,6 +211,11 @@ future<std::invoke_result_t<Continuation, con::result<T>>> future<T>::then(Conti
               return unit {};
           };
 
+    if (ready()) {
+        control_block_->continuation(control_block_->value);
+        control_block_->continuation = {};
+    }
+
     return std::move(fut);
 }
 
