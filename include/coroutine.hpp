@@ -11,7 +11,7 @@
 namespace co {
 
 template <typename T = void>
-class coroutine {
+class [[nodiscard]] coroutine {
 public:
     struct final_awaiter {
         bool await_ready() const noexcept
@@ -57,6 +57,11 @@ public:
         void return_value(T&& res) noexcept
         {
             result = std::move(res);
+        }
+
+        void return_value(const T& res) noexcept
+        {
+            result = res;
         }
     };
 
@@ -122,7 +127,7 @@ public:
         return *this;
     }
 
-    auto operator co_await()
+    auto operator co_await() &&
     {
         if (!handle_) {
             throw con::error("empty coroutine");
@@ -131,7 +136,7 @@ public:
         return awaiter { handle_ };
     }
 
-    bool done()
+    bool done() const
     {
         if (!handle_) {
             throw con::error("empty coroutine");
@@ -153,6 +158,9 @@ public:
         }
 
         handle_.promise().result.value();
+
+        handle_.destroy();
+        handle_ = nullptr;
     }
 
     template <typename U = T>
@@ -167,7 +175,12 @@ public:
             throw con::error("empty coroutine");
         }
 
-        return handle_.promise().result.value();
+        T value = std::move(handle_.promise().result.value());
+
+        handle_.destroy();
+        handle_ = nullptr;
+
+        return value;
     }
 
 private:
@@ -194,14 +207,14 @@ struct coroutine<void>::promise {
         return { };
     }
 
-    final_awaiter final_suspend() noexcept
+    coroutine<void>::final_awaiter final_suspend() noexcept
     {
         return { };
     }
 
-    coroutine get_return_object()
+    coroutine<void> get_return_object()
     {
-        return coroutine { std::coroutine_handle<promise>::from_promise(*this) };
+        return coroutine<void> { std::coroutine_handle<promise>::from_promise(*this) };
     }
 
     void return_void() noexcept
