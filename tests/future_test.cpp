@@ -49,7 +49,7 @@ SIMPLE_TEST(future_test_4)
 {
     auto [fut, prom] = co::create_future_promise<int>();
 
-    co::future<int> cont = fut.then([](con::result<int> i) { return i.value() + 1; });
+    co::future<int> cont = std::move(fut).then([](con::result<int> i) { return i.value() + 1; });
 
     try {
         throw std::runtime_error("test");
@@ -57,9 +57,9 @@ SIMPLE_TEST(future_test_4)
         prom.set_exception(std::current_exception());
     }
 
-    ASSERT_TRUE(fut.ready());
-    ASSERT_TRUE(!fut.has_value());
-    ASSERT_TRUE(fut.has_exception());
+    ASSERT_TRUE(cont.ready());
+    ASSERT_TRUE(!cont.has_value());
+    ASSERT_TRUE(cont.has_exception());
 
     try {
         cont.get();
@@ -73,13 +73,13 @@ SIMPLE_TEST(future_test_5)
 {
     auto [fut, prom] = co::create_future_promise<int>();
 
-    co::future<int> cont = fut.then([](con::result<int> i) { return i.value() + 1; });
+    co::future<int> cont = std::move(fut).then([](con::result<int> i) { return i.value() + 1; });
 
     prom.set_value(1);
 
-    ASSERT_TRUE(fut.ready());
-    ASSERT_TRUE(fut.has_value());
-    ASSERT_TRUE(!fut.has_exception());
+    ASSERT_TRUE(cont.ready());
+    ASSERT_TRUE(cont.has_value());
+    ASSERT_TRUE(!cont.has_exception());
 
     ASSERT_EQ(cont.get(), 2);
 }
@@ -88,18 +88,19 @@ SIMPLE_TEST(future_test_6)
 {
     auto [fut, prom] = co::create_future_promise<int>();
 
-    co::future<int> cont = fut.then([](con::result<int> i) {
-                                  return i.value() + 1; //
-                              })
+    co::future<int> cont = std::move(fut)
+                               .then([](con::result<int> i) {
+                                   return i.value() + 1; //
+                               })
                                .then([](con::result<int> i) {
                                    return i.value() + 1; //
                                });
 
     prom.set_value(1);
 
-    ASSERT_TRUE(fut.ready());
-    ASSERT_TRUE(fut.has_value());
-    ASSERT_TRUE(!fut.has_exception());
+    ASSERT_TRUE(cont.ready());
+    ASSERT_TRUE(cont.has_value());
+    ASSERT_TRUE(!cont.has_exception());
 
     ASSERT_EQ(cont.get(), 3);
 }

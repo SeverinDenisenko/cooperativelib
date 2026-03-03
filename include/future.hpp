@@ -7,11 +7,8 @@
 #include <exception>
 #include <type_traits>
 #include <utility>
-#include <variant>
 
 namespace co {
-
-using unit = std::monostate;
 
 template <typename T>
 class future;
@@ -46,7 +43,7 @@ private:
     size_t refcount { 0 };
     bool ready { false };
     con::result<T> value { };
-    move_only_function<unit, con::result<T>> continuation { };
+    move_only_function<void> continuation { };
 };
 
 template <typename T>
@@ -118,7 +115,7 @@ public:
         control_block_->ready = true;
         control_block_->value = std::move(value);
         if (control_block_->continuation) {
-            control_block_->continuation(control_block_->value);
+            control_block_->continuation();
             control_block_->continuation = { };
         }
     }
@@ -192,32 +189,56 @@ public:
 
     bool ready() const
     {
+        if (!control_block_) {
+            throw con::error("empty future");
+        }
+
         return control_block_->ready;
     }
 
     bool has_exception() const
     {
+        if (!control_block_) {
+            throw con::error("empty future");
+        }
+
         return control_block_->value.has_exception();
     }
 
     bool has_value() const
     {
+        if (!control_block_) {
+            throw con::error("empty future");
+        }
+
         return control_block_->value.has_value() && control_block_->ready;
     }
 
-    T get()
+    con::result<T> result()
     {
+        if (!control_block_) {
+            throw con::error("empty future");
+        }
+
         if (!control_block_->ready) {
             throw con::error("future is not ready");
         }
 
-        return control_block_->value.value();
+        return control_block_->value;
+    }
+
+    T get()
+    {
+        return result().value();
     }
 
     template <typename Continuation>
-    future<std::invoke_result_t<Continuation, con::result<T>>> then(Continuation continuation);
+    future<std::invoke_result_t<Continuation, con::result<T>>> then(Continuation continuation) &&;
 
     friend class promise<T>;
+
+    template <typename U>
+    friend class future;
 
 private:
     future(future_promise_control_block<T>* control_block) noexcept
@@ -248,24 +269,24 @@ promise<T> create_promise() noexcept
 
 template <typename T>
 template <typename Continuation>
-future<std::invoke_result_t<Continuation, con::result<T>>> future<T>::then(Continuation continuation)
+future<std::invoke_result_t<Continuation, con::result<T>>> future<T>::then(Continuation continuation) &&
 {
     auto [fut, prom] = create_future_promise<std::invoke_result_t<Continuation, con::result<T>>>();
 
-    control_block_->continuation
-        = [prom = std::move(prom), continuation = std::move(continuation)](con::result<T> arg) mutable {
+    if (!control_block_) {
+        throw con::error("empty future");
+    }
+
+    future_promise_control_block<T>* control_block = control_block_;
+
+    control_block->continuation
+        = [prom = std::move(prom), this_future = std::move(*this), continuation = std::move(continuation)]() mutable {
               try {
-                  prom.set_value(continuation(std::move(arg)));
+                  prom.set_value(continuation(this_future.result()));
               } catch (...) {
                   prom.set_exception(std::current_exception());
               }
-              return unit { };
           };
-
-    if (ready()) {
-        control_block_->continuation(control_block_->value);
-        control_block_->continuation = { };
-    }
 
     return std::move(fut);
 }

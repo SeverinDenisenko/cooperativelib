@@ -16,12 +16,12 @@ SIMPLE_TEST(event_loop_test_1)
         iters++;
         loop.invoke([&]() {
                 iters++;
-                return co::unit {};
+                return con::unit { };
             })
-            .then([&](con::result<co::unit>) {
+            .then([&](con::result<con::unit>) {
                 iters++;
                 loop.stop();
-                return co::unit {};
+                return con::unit { };
             });
     });
 
@@ -49,7 +49,7 @@ SIMPLE_TEST(event_loop_test_2)
                 .then([&](con::result<int> result) {
                     loop_1.stop();
                     answer = result.value();
-                    return co::unit {};
+                    return con::unit { };
                 });
         });
 
