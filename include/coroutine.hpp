@@ -30,10 +30,9 @@ public:
         }
     };
 
-    template <typename U>
-    struct promise_base {
+    struct promise {
         std::coroutine_handle<> continuation { std::noop_coroutine() };
-        std::conditional_t<std::is_same_v<U, void>, con::result<con::unit>, con::result<U>> result { };
+        con::result<T> result { };
 
         void unhandled_exception() noexcept
         {
@@ -49,10 +48,7 @@ public:
         {
             return { };
         }
-    };
 
-    template <typename U>
-    struct promise : public promise_base<U> {
         coroutine get_return_object()
         {
             return coroutine { std::coroutine_handle<promise>::from_promise(*this) };
@@ -60,32 +56,19 @@ public:
 
         void return_value(T&& res) noexcept
         {
-            promise_base<U>::result = std::move(res);
-        }
-    };
-
-    template <>
-    struct promise<void> : public promise_base<void> {
-        coroutine get_return_object()
-        {
-            return coroutine { std::coroutine_handle<promise>::from_promise(*this) };
-        }
-
-        void return_void() noexcept
-        {
-            promise_base<void>::result = con::unit { };
+            result = std::move(res);
         }
     };
 
     struct awaiter {
-        std::coroutine_handle<promise<T>> handle;
+        std::coroutine_handle<promise> handle;
 
         bool await_ready() const noexcept
         {
             return !handle || handle.done();
         }
 
-        std::coroutine_handle<promise<T>> await_suspend(std::coroutine_handle<> calling) noexcept
+        std::coroutine_handle<promise> await_suspend(std::coroutine_handle<> calling) noexcept
         {
             handle.promise().continuation = calling;
             return handle;
@@ -106,7 +89,7 @@ public:
         }
     };
 
-    using promise_type = promise<T>;
+    using promise_type = promise;
 
     ~coroutine()
     {
@@ -188,12 +171,43 @@ public:
     }
 
 private:
-    explicit coroutine(std::coroutine_handle<promise<T>> handle)
+    explicit coroutine(std::coroutine_handle<promise> handle)
         : handle_(handle)
     {
     }
 
-    std::coroutine_handle<promise<T>> handle_ { };
+    std::coroutine_handle<promise> handle_ { };
+};
+
+template <>
+struct coroutine<void>::promise {
+    std::coroutine_handle<> continuation { std::noop_coroutine() };
+    con::result<con::unit> result { };
+
+    void unhandled_exception() noexcept
+    {
+        result = std::current_exception();
+    }
+
+    std::suspend_never initial_suspend() noexcept
+    {
+        return { };
+    }
+
+    final_awaiter final_suspend() noexcept
+    {
+        return { };
+    }
+
+    coroutine get_return_object()
+    {
+        return coroutine { std::coroutine_handle<promise>::from_promise(*this) };
+    }
+
+    void return_void() noexcept
+    {
+        result = con::unit { };
+    }
 };
 
 }
