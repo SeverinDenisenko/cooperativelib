@@ -141,4 +141,11 @@ SIMPLE_TEST(future_test_8)
     ASSERT_EQ(fut2.get(), 2);
 }
 
+SIMPLE_TEST(future_test_9)
+{
+    auto [f, p] = co::create_future_promise<int>();
+
+    auto f2 = std::move(f).then([](con::result<int> res) { return res.value() + 1; });
+}
+
 TEST_MAIN()

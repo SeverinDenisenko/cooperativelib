@@ -73,18 +73,20 @@ public:
     {
     }
 
-    promise(promise&& other)
+    promise(promise&& other) noexcept
     {
         std::swap(other.control_block_, control_block_);
+        std::swap(other.future_given_, future_given_);
     }
 
-    promise& operator=(promise&& other)
+    promise& operator=(promise&& other) noexcept
     {
         if (this == std::addressof(other)) {
             return *this;
         }
 
         std::swap(other.control_block_, control_block_);
+        std::swap(other.future_given_, future_given_);
 
         return *this;
     }
@@ -168,12 +170,12 @@ public:
     future()
         : control_block_(nullptr) { };
 
-    future(future&& other)
+    future(future&& other) noexcept
     {
         std::swap(other.control_block_, control_block_);
     }
 
-    future& operator=(future&& other)
+    future& operator=(future&& other) noexcept
     {
         if (this == std::addressof(other)) {
             return *this;
@@ -202,7 +204,7 @@ public:
             throw con::error("empty future");
         }
 
-        return control_block_->value.has_exception();
+        return control_block_->value.has_exception() && control_block_->ready;
     }
 
     bool has_value() const
@@ -288,15 +290,14 @@ future<std::invoke_result_t<Continuation, con::result<T>>> future<T>::then(Conti
     } else {
         future_promise_control_block<T>* control_block = this_future.control_block_;
 
-        control_block->continuation = [prom         = std::move(prom),
-                                       this_future  = std::move(this_future),
-                                       continuation = std::move(continuation)]() mutable {
-            try {
-                prom.set_value(continuation(this_future.result()));
-            } catch (...) {
-                prom.set_exception(std::current_exception());
-            }
-        };
+        control_block->continuation
+            = [prom = std::move(prom), control_block, continuation = std::move(continuation)]() mutable {
+                  try {
+                      prom.set_value(continuation(control_block->value));
+                  } catch (...) {
+                      prom.set_exception(std::current_exception());
+                  }
+              };
     }
 
     return std::move(fut);
