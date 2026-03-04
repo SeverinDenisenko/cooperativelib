@@ -53,4 +53,22 @@ SIMPLE_TEST(future_awaiter_test_2)
     ASSERT_EQ(coro.get(), 43);
 }
 
+SIMPLE_TEST(future_awaiter_exception_test)
+{
+    auto [fut, prom] = co::create_future_promise<int>();
+
+    prom.set_exception(std::make_exception_ptr(std::runtime_error("test")));
+
+    co::coroutine<int> coro = test_coroutine_1(std::move(fut));
+
+    ASSERT_TRUE(coro.done());
+
+    try {
+        coro.get();
+        ASSERT_TRUE(false);
+    } catch (const std::runtime_error& ex) {
+        ASSERT_EQ(std::string(ex.what()), "test");
+    }
+}
+
 TEST_MAIN()
