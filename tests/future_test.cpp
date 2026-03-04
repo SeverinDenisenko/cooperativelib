@@ -3,7 +3,7 @@
 
 #include "future.hpp"
 
-SIMPLE_TEST(future_test_1)
+SIMPLE_TEST(unresolved_future_test)
 {
     auto [fut, prom] = co::create_future_promise<int>();
 
@@ -12,7 +12,7 @@ SIMPLE_TEST(future_test_1)
     ASSERT_TRUE(!fut.has_exception());
 }
 
-SIMPLE_TEST(future_test_2)
+SIMPLE_TEST(resolved_future_test)
 {
     auto [fut, prom] = co::create_future_promise<int>();
 
@@ -24,7 +24,7 @@ SIMPLE_TEST(future_test_2)
     ASSERT_EQ(fut.get(), 1);
 }
 
-SIMPLE_TEST(future_test_3)
+SIMPLE_TEST(exception_future_test)
 {
     auto [fut, prom] = co::create_future_promise<int>();
 
@@ -46,7 +46,7 @@ SIMPLE_TEST(future_test_3)
     }
 }
 
-SIMPLE_TEST(future_test_4)
+SIMPLE_TEST(exception_future_continuation_test)
 {
     auto [fut, prom] = co::create_future_promise<int>();
 
@@ -70,7 +70,7 @@ SIMPLE_TEST(future_test_4)
     }
 }
 
-SIMPLE_TEST(future_test_5)
+SIMPLE_TEST(future_continuation_test)
 {
     auto [fut, prom] = co::create_future_promise<int>();
 
@@ -85,7 +85,7 @@ SIMPLE_TEST(future_test_5)
     ASSERT_EQ(cont.get(), 2);
 }
 
-SIMPLE_TEST(future_test_6)
+SIMPLE_TEST(future_multiple_continuation_test)
 {
     auto [fut, prom] = co::create_future_promise<int>();
 
@@ -106,7 +106,7 @@ SIMPLE_TEST(future_test_6)
     ASSERT_EQ(cont.get(), 3);
 }
 
-SIMPLE_TEST(future_test_7)
+SIMPLE_TEST(future_moved_test)
 {
     auto [fut, prom] = co::create_future_promise<int>();
 
@@ -122,7 +122,7 @@ SIMPLE_TEST(future_test_7)
     }
 }
 
-SIMPLE_TEST(future_test_8)
+SIMPLE_TEST(future_continuation_after_resolved_test)
 {
     auto [fut, prom] = co::create_future_promise<int>();
 
@@ -141,7 +141,7 @@ SIMPLE_TEST(future_test_8)
     ASSERT_EQ(fut2.get(), 2);
 }
 
-SIMPLE_TEST(future_test_9)
+SIMPLE_TEST(future_unresolved_continuation_test)
 {
     auto [f, p] = co::create_future_promise<int>();
 
