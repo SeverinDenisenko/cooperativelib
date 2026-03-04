@@ -1,3 +1,4 @@
+#include "result.hpp"
 #include "unittest.hpp"
 
 #include "future.hpp"
@@ -119,6 +120,25 @@ SIMPLE_TEST(future_test_7)
         ASSERT_TRUE(false);
     } catch (...) {
     }
+}
+
+SIMPLE_TEST(future_test_8)
+{
+    auto [fut, prom] = co::create_future_promise<int>();
+
+    prom.set_value(1);
+
+    ASSERT_TRUE(fut.ready());
+    ASSERT_TRUE(fut.has_value());
+    ASSERT_TRUE(!fut.has_exception());
+    ASSERT_EQ(fut.get(), 1);
+
+    auto fut2 = std::move(fut).then([](con::result<int> res) { return res.value() + 1; });
+
+    ASSERT_TRUE(fut2.ready());
+    ASSERT_TRUE(fut2.has_value());
+    ASSERT_TRUE(!fut2.has_exception());
+    ASSERT_EQ(fut2.get(), 2);
 }
 
 TEST_MAIN()

@@ -20,7 +20,7 @@ public:
         return false;
     }
 
-    void await_suspend(std::coroutine_handle<> calling) noexcept
+    void await_suspend(std::coroutine_handle<> calling)
     {
         std::move(future_).then([calling, this](con::result<T> result) {
             result_ = std::move(result);

@@ -277,16 +277,27 @@ future<std::invoke_result_t<Continuation, con::result<T>>> future<T>::then(Conti
         throw con::error("empty future");
     }
 
-    future_promise_control_block<T>* control_block = control_block_;
+    future<T> this_future = std::move(*this);
 
-    control_block->continuation
-        = [prom = std::move(prom), this_future = std::move(*this), continuation = std::move(continuation)]() mutable {
-              try {
-                  prom.set_value(continuation(this_future.result()));
-              } catch (...) {
-                  prom.set_exception(std::current_exception());
-              }
-          };
+    if (this_future.ready()) {
+        try {
+            prom.set_value(continuation(this_future.result()));
+        } catch (...) {
+            prom.set_exception(std::current_exception());
+        }
+    } else {
+        future_promise_control_block<T>* control_block = this_future.control_block_;
+
+        control_block->continuation = [prom         = std::move(prom),
+                                       this_future  = std::move(this_future),
+                                       continuation = std::move(continuation)]() mutable {
+            try {
+                prom.set_value(continuation(this_future.result()));
+            } catch (...) {
+                prom.set_exception(std::current_exception());
+            }
+        };
+    }
 
     return std::move(fut);
 }
