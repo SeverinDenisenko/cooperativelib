@@ -49,8 +49,21 @@ public:
     {
     }
 
-    move_only_function(move_only_function&& other) noexcept            = default;
-    move_only_function& operator=(move_only_function&& other) noexcept = default;
+    move_only_function(move_only_function&& other) noexcept
+    {
+        std::swap(function_, other.function_);
+    }
+
+    move_only_function& operator=(move_only_function&& other) noexcept
+    {
+        if (this == std::addressof(other)) {
+            return *this;
+        }
+
+        std::swap(function_, other.function_);
+
+        return *this;
+    }
 
     template <typename F>
         requires(std::invocable<F&, Args...> && !std::same_as<std::decay_t<F>, move_only_function>)
